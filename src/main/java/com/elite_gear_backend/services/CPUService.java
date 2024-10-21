@@ -9,15 +9,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.elite_gear_backend.dto.CPUDto;
 import com.elite_gear_backend.dto.CpuUpdateDto;
 import com.elite_gear_backend.entity.CPU;
+import com.elite_gear_backend.entity.Category;
 import com.elite_gear_backend.entity.Photo;
 import com.elite_gear_backend.entity.Product;
 import com.elite_gear_backend.entity.Rating;
+import com.elite_gear_backend.repository.CategoryRepository;
 import com.elite_gear_backend.repository.CpuRepository;
 import com.elite_gear_backend.repository.PhotoRepository;
 import com.elite_gear_backend.repository.ProductRepository;
@@ -32,6 +35,8 @@ public class CPUService {
     private final PhotoRepository photoRepository;
     private final RatingRepository ratingRepository;
     private final ProductRepository productRepository;
+    @Autowired
+    private CategoryRepository categoryRepository; // Inject the CategoryRepository
 
     public CPUService(CpuRepository cpuRepository, PhotoRepository photoRepository, RatingRepository ratingRepository, ProductRepository productRepository) {
         this.cpuRepository = cpuRepository;
@@ -136,8 +141,14 @@ public class CPUService {
         product.setManufacturer(cpuUpdateDto.getManufacturer());
         product.setModel(cpuUpdateDto.getModel());
         product.setPrice(cpuUpdateDto.getPrice());
-        productRepository.save(product);
 
+        Category category = categoryRepository.findById(1L)
+                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+
+        product.setCategory(category); // Set the category to the product
+        productRepository.save(product); // Save the product
+
+        System.out.println("Product" + product.getId());
         // Create new CPU
         CPU cpu = new CPU();
         cpu.setProduct(product);
@@ -148,20 +159,22 @@ public class CPUService {
         cpu.setThreads(cpuUpdateDto.getThreads());
         cpu.setTechnologicalProcess(cpuUpdateDto.getTechnologicalProcess());
         cpu.setPowerConsumption(cpuUpdateDto.getPowerConsumption());
-        cpuRepository.save(cpu);
+        cpuRepository.save(cpu); // Save the CPU
 
         // Save photos
-        for (MultipartFile photoFile : photos) {
-            String originalFileName = photoFile.getOriginalFilename();
-            String fileName = resolveFileName(originalFileName);
-            Path filePath = Paths.get("uploads", fileName);
-            Files.copy(photoFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            // Create and save Photo entity
-            Photo photo = new Photo();
-            photo.setFileName(fileName);
-            photo.setProduct(product);
-            photoRepository.save(photo);
+        if (photos != null) {
+            for (MultipartFile photoFile : photos) {
+                String originalFileName = photoFile.getOriginalFilename();
+                String fileName = resolveFileName(originalFileName);
+                Path filePath = Paths.get("uploads", fileName);
+                Files.copy(photoFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+    
+                // Create and save Photo entity
+                Photo photo = new Photo();
+                photo.setFileName(fileName);
+                photo.setProduct(product);
+                photoRepository.save(photo);
+            }
         }
 
         // Prepare URLs for saved photos

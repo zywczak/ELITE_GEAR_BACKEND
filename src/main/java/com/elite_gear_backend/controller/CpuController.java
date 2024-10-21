@@ -1,5 +1,7 @@
 package com.elite_gear_backend.controller;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,16 +9,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.elite_gear_backend.dto.CPUDto;
 import com.elite_gear_backend.dto.CpuUpdateDto;
-import com.elite_gear_backend.repository.CpuRepository;
-import com.elite_gear_backend.repository.PhotoRepository;
-import com.elite_gear_backend.repository.ProductRepository;
 import com.elite_gear_backend.services.CPUService;
 
 @RestController
@@ -26,15 +28,6 @@ public class CpuController {
 
     @Autowired
     private CPUService cpuService;
-
-    @Autowired
-    private CpuRepository cpuRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private PhotoRepository photoRepository;
 
     @GetMapping("/{productId}")
     public ResponseEntity<CPUDto> getCPUByProductId(@PathVariable Long productId) {
@@ -55,16 +48,15 @@ public class CpuController {
     }
 
    
-    // @PostMapping
-    // public ResponseEntity<CPU> addCPU(@RequestBody CPU newCPU) {
-    //     Product product = newCPU.getProduct();
-    //     if (product != null) {
-    //         product = productRepository.save(product);
-    //         newCPU.setProduct(product);
-    //     }
-        
-    //     CPU savedCPU = cpuRepository.save(newCPU);
-
-    //     return ResponseEntity.status(201).body(savedCPU);
-    // }
+    @PostMapping
+    public ResponseEntity<CPUDto> addCpu(
+            @RequestBody CpuUpdateDto cpuUpdateDto,
+            @RequestParam(value = "photos", required = false) List<MultipartFile> photos) {
+        try {
+            CPUDto cpuDto = cpuService.addCpu(cpuUpdateDto, photos);
+            return ResponseEntity.status(201).body(cpuDto);
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body(null);
+        }
+    }
 }

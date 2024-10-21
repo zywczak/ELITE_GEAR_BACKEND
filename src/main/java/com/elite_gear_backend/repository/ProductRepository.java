@@ -8,4 +8,5 @@ import com.elite_gear_backend.entity.Product;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByCategory_Name(String categoryName);
+    
 }
