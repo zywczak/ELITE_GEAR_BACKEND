@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.elite_gear_backend.dto.CPUAddDto;
 import com.elite_gear_backend.dto.CPUDto;
 import com.elite_gear_backend.dto.CpuUpdateDto;
 import com.elite_gear_backend.entity.CPU;
@@ -35,14 +35,14 @@ public class CPUService {
     private final PhotoRepository photoRepository;
     private final RatingRepository ratingRepository;
     private final ProductRepository productRepository;
-    @Autowired
-    private CategoryRepository categoryRepository; // Inject the CategoryRepository
+    private final CategoryRepository categoryRepository;
 
-    public CPUService(CpuRepository cpuRepository, PhotoRepository photoRepository, RatingRepository ratingRepository, ProductRepository productRepository) {
+    public CPUService(CpuRepository cpuRepository, PhotoRepository photoRepository, RatingRepository ratingRepository, ProductRepository productRepository, CategoryRepository categoryRepository) {
         this.cpuRepository = cpuRepository;
         this.photoRepository = photoRepository;
         this.ratingRepository = ratingRepository;
         this.productRepository = productRepository; 
+        this.categoryRepository = categoryRepository;
     }
 
     public Optional<CPUDto> getCPUByProductId(Long productId) {
@@ -135,49 +135,52 @@ public class CPUService {
     }
 
     @Transactional
-    public CPUDto addCpu(CpuUpdateDto cpuUpdateDto, List<MultipartFile> photos) throws IOException {
-        // Create new product
+    public CPUDto addCpu(CPUAddDto cpuAddDto) throws IOException {
+        // Create new Product entity
         Product product = new Product();
-        product.setManufacturer(cpuUpdateDto.getManufacturer());
-        product.setModel(cpuUpdateDto.getModel());
-        product.setPrice(cpuUpdateDto.getPrice());
+        product.setManufacturer(cpuAddDto.getManufacturer());
+        product.setModel(cpuAddDto.getModel());
+        product.setPrice(cpuAddDto.getPrice());
 
+        // Retrieve and set category
         Category category = categoryRepository.findById(1L)
                 .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+        product.setCategory(category);
 
-        product.setCategory(category); // Set the category to the product
-        productRepository.save(product); // Save the product
+        productRepository.save(product); // Save the product in DB
 
-        System.out.println("Product" + product.getId());
-        // Create new CPU
+        // Create and save CPU entity
         CPU cpu = new CPU();
         cpu.setProduct(product);
-        cpu.setSpeed(cpuUpdateDto.getSpeed());
-        cpu.setArchitecture(cpuUpdateDto.getArchitecture());
-        cpu.setSupportedMemory(cpuUpdateDto.getSupportedMemory());
-        cpu.setCooling(cpuUpdateDto.isCooling());
-        cpu.setThreads(cpuUpdateDto.getThreads());
-        cpu.setTechnologicalProcess(cpuUpdateDto.getTechnologicalProcess());
-        cpu.setPowerConsumption(cpuUpdateDto.getPowerConsumption());
-        cpuRepository.save(cpu); // Save the CPU
+        cpu.setSpeed(cpuAddDto.getSpeed());
+        cpu.setArchitecture(cpuAddDto.getArchitecture());
+        cpu.setSupportedMemory(cpuAddDto.getSupportedMemory());
+        cpu.setCooling(cpuAddDto.isCooling());
+        cpu.setThreads(cpuAddDto.getThreads());
+        cpu.setTechnologicalProcess(cpuAddDto.getTechnologicalProcess());
+        cpu.setPowerConsumption(cpuAddDto.getPowerConsumption());
 
-        // Save photos
-        if (photos != null) {
-            for (MultipartFile photoFile : photos) {
-                String originalFileName = photoFile.getOriginalFilename();
-                String fileName = resolveFileName(originalFileName);
-                Path filePath = Paths.get("uploads", fileName);
-                Files.copy(photoFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-    
-                // Create and save Photo entity
-                Photo photo = new Photo();
-                photo.setFileName(fileName);
-                photo.setProduct(product);
-                photoRepository.save(photo);
+        cpuRepository.save(cpu); // Save the CPU entity
+
+        // Save uploaded photos
+        if (cpuAddDto.getPhotos() != null && !cpuAddDto.getPhotos().isEmpty()) {
+            for (MultipartFile photoFile : cpuAddDto.getPhotos()) {
+                if (!photoFile.isEmpty()) {
+                    String originalFileName = photoFile.getOriginalFilename();
+                    String fileName = resolveFileName(originalFileName);
+                    Path filePath = Paths.get("C:\\Users\\piotr\\OneDrive\\Pulpit\\ELITE_GEAR_BACKEND\\src\\main\\resources\\public\\", fileName);
+                    // Save file to specified directory
+                    Files.copy(photoFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+                    // Save Photo entity
+                    Photo photo = new Photo();
+                    photo.setFileName(fileName);
+                    photo.setProduct(product);
+                    photoRepository.save(photo);
+                }
             }
         }
 
-        // Prepare URLs for saved photos
         List<Photo> savedPhotos = photoRepository.findByProductId(product.getId());
         List<String> photoUrls = savedPhotos.stream()
                 .map(photo -> String.format("http://localhost:8080/products/%d/photos/%d", product.getId(), photo.getId()))
@@ -203,11 +206,11 @@ public class CPUService {
 
     private String resolveFileName(String originalFileName) {
         String fileName = originalFileName;
-        Path filePath = Paths.get("public/", fileName);
+        Path filePath = Paths.get("C:\\Users\\piotr\\OneDrive\\Pulpit\\ELITE_GEAR_BACKEND\\src\\main\\resources\\public\\", fileName);
 
         if (Files.exists(filePath)) {
             String fileExtension = "";
-            String baseName = "";
+            String baseName;
 
             int dotIndex = originalFileName.lastIndexOf(".");
             if (dotIndex > 0) {

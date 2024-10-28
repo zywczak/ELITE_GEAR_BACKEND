@@ -2,21 +2,24 @@ package com.elite_gear_backend.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
-import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "rams")
 public class RAM {
 
-    @Id
-    @Column(name = "product_id")
+   @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id")
     private Long id;
 
     @OneToOne
-    @PrimaryKeyJoinColumn(name = "product_id")
+    @JoinColumn(name = "product_id")
     private Product product;
 
     @Column(name = "speed")
@@ -42,7 +45,6 @@ public class RAM {
 
     public RAM(Product product, int speed, String capacity, int voltage, int moduleCount, boolean backlight, boolean cooling) {
         this.product = product;
-        this.id = product.getId();
         this.product = product;
         this.speed = speed;
         this.capacity = capacity;

@@ -2,13 +2,13 @@ package com.elite_gear_backend.dto;
 
 import java.util.List;
 
-public class CPUDto {
-    private Long id;
+import org.springframework.web.multipart.MultipartFile;
+
+public class CPUAddDto {
     private String manufacturer;
     private String model;
     private double price;
-    private double rating;
-    private List<String> photos;
+    private List<MultipartFile> photos;
     private double speed;
     private String architecture;
     private String supportedMemory;
@@ -16,15 +16,6 @@ public class CPUDto {
     private int threads;
     private int technologicalProcess;
     private int powerConsumption;
-
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     public String getManufacturer() {
         return manufacturer;
@@ -50,30 +41,21 @@ public class CPUDto {
         this.price = price;
     }
 
-    public double getRating() {
-        return rating;
-    }
-
-    public void setRating(double rating) {
-        this.rating = rating;
-    }
-
-    public List<String> getPhotos() {
+    public List<MultipartFile> getPhotos() {
         return photos;
     }
 
-    public void setPhotos(List<String> photos) {
+    public void setPhotos(List<MultipartFile> photos) {
         this.photos = photos;
     }
 
-     // Setter for speed
-     public void setSpeed(double speed) {
-        this.speed = speed;
+    public double getSpeed() {
+        return speed;
     }
 
-     // Setter for speed
-     public double getSpeed() {
-        return this.speed;
+    // Setter for speed
+    public void setSpeed(double speed) {
+        this.speed = speed;
     }
 
     // Getter for architecture

@@ -6,14 +6,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.elite_gear_backend.dto.ProductDto;
-import com.elite_gear_backend.dto.RatingDto;
+import com.elite_gear_backend.dto.UpdateProductPhotosDTO;
 import com.elite_gear_backend.services.ProductService;
-import com.elite_gear_backend.services.RatingService;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:3000")
@@ -23,10 +25,6 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
-    @Autowired
-    private RatingService ratingService;
-
-    // Pobierz listę produktów dla danej kategorii z ich zdjęciami i średnimi ocenami
     @GetMapping("/{categoryName}")
     public ResponseEntity<List<ProductDto>> getProductsByCategory(@PathVariable String categoryName) {
         List<ProductDto> products = productService.getProductsByCategoryWithPhotosAndRatings(categoryName);
@@ -38,9 +36,33 @@ public class ProductController {
         }
     }
 
-    @GetMapping("/{id}/ratings")
-    public ResponseEntity<List<RatingDto>> getRatingsByProductId(@PathVariable Long id) {
-        List<RatingDto> ratings = ratingService.getRatingsByProductId(id);
-        return ResponseEntity.ok(ratings);
-    }
+        @PostMapping(value = "/product/{productId}/photos")
+        public ResponseEntity<?> updateProductPhotos(
+                @PathVariable Long productId,
+                @ModelAttribute UpdateProductPhotosDTO updateProductPhotosDTO) {
+
+            // Sprawdź, czy obie listy są opcjonalne i czy wymagają dalszego przetwarzania
+            MultipartFile[] photosToAdd = updateProductPhotosDTO.getPhotosToAdd();
+            List<Long> photoIdsToRemove = updateProductPhotosDTO.getPhotoIdsToRemove();
+
+            if ((photosToAdd == null || photosToAdd.length == 0) &&
+                (photoIdsToRemove == null || photoIdsToRemove.isEmpty())) {
+                return ResponseEntity.badRequest().body("No photos to add or remove provided.");
+            }
+
+            // Wywołanie usługi aktualizującej zdjęcia
+            productService.updatePhotos(productId, photosToAdd, photoIdsToRemove);
+            return ResponseEntity.ok().build();
+        }
+
+    // @PostMapping("/product/{productId}/photos")
+    // public ResponseEntity<?> updateProductPhotos(
+    //         @PathVariable Long productId,
+    //         @RequestPart("photosToAdd") MultipartFile[] photosToAdd,
+    //         @RequestPart("photoIdsToRemove") List<Integer> photoIdsToRemove
+    //         ) {
+
+    //     productService.updatePhotos(productId, photosToAdd, photoIdsToRemove);
+    //     return ResponseEntity.ok().build();
+    // }
 }

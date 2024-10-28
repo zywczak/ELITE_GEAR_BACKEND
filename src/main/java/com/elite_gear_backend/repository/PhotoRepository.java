@@ -8,4 +8,5 @@ import com.elite_gear_backend.entity.Photo;
 
 public interface PhotoRepository extends JpaRepository<Photo, Long> {
     List<Photo> findByProductId(Long productId);
+    void deleteById(Integer id);
 }

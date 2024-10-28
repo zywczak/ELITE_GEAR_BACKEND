@@ -2,9 +2,11 @@ package com.elite_gear_backend.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
-import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
 
 @Entity
@@ -12,11 +14,12 @@ import jakarta.persistence.Table;
 public class Cooler {
 
     @Id
-    @Column(name = "product_id")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id")
     private Long id;
 
     @OneToOne
-    @PrimaryKeyJoinColumn(name = "product_id")
+    @JoinColumn(name = "product_id")
     private Product product;
 
     @Column(name = "type")
@@ -45,7 +48,6 @@ public class Cooler {
 
     public Cooler(Product product, String type, int fanCount, int fanSize, boolean backlight, String material, String radiatorSize, String compatibility) {
         this.product = product;
-        this.id = product.getId();
         this.type = type;
         this.fanCount = fanCount;
         this.fanSize = fanSize;

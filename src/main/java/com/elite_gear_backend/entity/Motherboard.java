@@ -2,9 +2,11 @@ package com.elite_gear_backend.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
-import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
 
 @Entity
@@ -12,11 +14,12 @@ import jakarta.persistence.Table;
 public class Motherboard {
 
     @Id
-    @Column(name = "product_id")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id")
     private Long id;
 
     @OneToOne
-    @PrimaryKeyJoinColumn(name = "product_id")
+    @JoinColumn(name = "product_id")
     private Product product;
 
     @Column(name = "chipset")
@@ -50,8 +53,7 @@ public class Motherboard {
     }
 
     // Parameterized constructor (optional, for convenience)
-    public Motherboard(Long id, Product product, String chipset, String formFactor, String supportedMemory, String socket, String cpuArchitecture, String internalConnectors, String externalConnectors, int memorySlots, String audioSystem) {
-        this.id = id;
+    public Motherboard(Product product, String chipset, String formFactor, String supportedMemory, String socket, String cpuArchitecture, String internalConnectors, String externalConnectors, int memorySlots, String audioSystem) {
         this.product = product;
         this.chipset = chipset;
         this.formFactor = formFactor;

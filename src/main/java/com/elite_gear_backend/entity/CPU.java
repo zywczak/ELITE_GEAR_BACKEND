@@ -48,8 +48,6 @@ public class CPU {
 
     public CPU(Product product, double speed, String architecture, String supportedMemory, boolean cooling, int threads, int technologicalProcess, int powerConsumption) {
         this.product = product;
-        this.id = product.getId();
-        this.product = product;
         this.speed = speed;
         this.architecture = architecture;
         this.supportedMemory = supportedMemory;

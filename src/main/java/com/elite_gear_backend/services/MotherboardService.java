@@ -9,15 +9,19 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.elite_gear_backend.dto.MotherboardAddDto;
 import com.elite_gear_backend.dto.MotherboardDto;
 import com.elite_gear_backend.dto.MotherboardUpdateDto;
+import com.elite_gear_backend.entity.Category;
 import com.elite_gear_backend.entity.Motherboard;
 import com.elite_gear_backend.entity.Photo;
 import com.elite_gear_backend.entity.Product;
 import com.elite_gear_backend.entity.Rating;
+import com.elite_gear_backend.repository.CategoryRepository;
 import com.elite_gear_backend.repository.MotherboardRepository;
 import com.elite_gear_backend.repository.PhotoRepository;
 import com.elite_gear_backend.repository.ProductRepository;
@@ -32,6 +36,8 @@ public class MotherboardService {
     private final PhotoRepository photoRepository;
     private final RatingRepository ratingRepository;
     private final ProductRepository productRepository;
+    @Autowired
+    private CategoryRepository categoryRepository; // Inject the CategoryRepository
 
     public MotherboardService(MotherboardRepository motherboardRepository, PhotoRepository photoRepository, RatingRepository ratingRepository, ProductRepository productRepository) {
         this.motherboardRepository = motherboardRepository;
@@ -135,76 +141,83 @@ public class MotherboardService {
         return Optional.of(updatedDto);
     }
 
-    @Transactional
-    public MotherboardDto addMotherboard(MotherboardUpdateDto motherboardUpdateDto, List<MultipartFile> photos) throws IOException {
-        // Tworzymy nowy produkt
+    public MotherboardDto addMotherboard(MotherboardAddDto motherboardAddDto) throws IOException {
+        // Create a new Product entity
         Product product = new Product();
-        product.setManufacturer(motherboardUpdateDto.getManufacturer());
-        product.setModel(motherboardUpdateDto.getModel());
-        product.setPrice(motherboardUpdateDto.getPrice());
-        productRepository.save(product);
-
-        // Tworzymy nową płytę główną
+        product.setManufacturer(motherboardAddDto.getManufacturer());
+        product.setModel(motherboardAddDto.getModel());
+        product.setPrice(motherboardAddDto.getPrice());
+    
+        // Retrieve and set category (use appropriate ID for motherboards)
+        Category category = categoryRepository.findById(4L)  // Adjust category ID as needed
+                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+        product.setCategory(category);
+        productRepository.save(product); // Save the product in the database
+    
+        // Create and save Motherboard entity
         Motherboard motherboard = new Motherboard();
-        motherboard.setProduct(product);
-        motherboard.setChipset(motherboardUpdateDto.getChipset());
-        motherboard.setFormFactor(motherboardUpdateDto.getFormFactor());
-        motherboard.setSupportedMemory(motherboardUpdateDto.getSupportedMemory());
-        motherboard.setSocket(motherboardUpdateDto.getSocket());
-        motherboard.setCpuArchitecture(motherboardUpdateDto.getCpuArchitecture());
-        motherboard.setInternalConnectors(motherboardUpdateDto.getInternalConnectors());
-        motherboard.setExternalConnectors(motherboardUpdateDto.getExternalConnectors());
-        motherboard.setMemorySlots(motherboardUpdateDto.getMemorySlots());
-        motherboard.setAudioSystem(motherboardUpdateDto.getAudioSystem());
+        motherboard.setProduct(product); // This relationship must remain
+        motherboard.setChipset(motherboardAddDto.getChipset());
+        motherboard.setFormFactor(motherboardAddDto.getFormFactor());
+        motherboard.setSupportedMemory(motherboardAddDto.getSupportedMemory());
+        motherboard.setSocket(motherboardAddDto.getSocket());
+        motherboard.setCpuArchitecture(motherboardAddDto.getCpuArchitecture());
+        motherboard.setInternalConnectors(motherboardAddDto.getInternalConnectors());
+        motherboard.setExternalConnectors(motherboardAddDto.getExternalConnectors());
+        motherboard.setMemorySlots(motherboardAddDto.getMemorySlots());
+        motherboard.setAudioSystem(motherboardAddDto.getAudioSystem());
+        
+        motherboardRepository.save(motherboard); // Save motherboard entity
 
-        motherboardRepository.save(motherboard);
+    // Save uploaded photos
+    if (motherboardAddDto.getPhotos() != null && !motherboardAddDto.getPhotos().isEmpty()) {
+        for (MultipartFile photoFile : motherboardAddDto.getPhotos()) {
+            if (!photoFile.isEmpty()) {
+                String originalFileName = photoFile.getOriginalFilename();
+                String fileName = resolveFileName(originalFileName);
+                Path filePath = Paths.get("C:\\Users\\piotr\\OneDrive\\Pulpit\\ELITE_GEAR_BACKEND\\src\\main\\resources\\public\\", fileName);
+                Files.copy(photoFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-        // Zapisujemy zdjęcia
-        for (MultipartFile photoFile : photos) {
-            String originalFileName = photoFile.getOriginalFilename();
-            String fileName = resolveFileName(originalFileName);  // Metoda do unikalnej nazwy
-            Path filePath = Paths.get("uploads", fileName); // Zakładamy, że zdjęcia będą zapisywane w katalogu "uploads"
-            
-            // Zapis pliku na dysku
-            Files.copy(photoFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            
-            // Tworzymy obiekt Photo i zapisujemy w bazie
-            Photo photo = new Photo();
-            photo.setFileName(fileName);
-            photo.setProduct(product);
-            photoRepository.save(photo);
+                // Save Photo entity
+                Photo photo = new Photo();
+                photo.setFileName(fileName);
+                photo.setProduct(product);
+                photoRepository.save(photo);
+            }
         }
-
-        // Przygotowujemy URL-e zdjęć
-        List<Photo> savedPhotos = photoRepository.findByProductId(product.getId());
-        List<String> photoUrls = savedPhotos.stream()
-                .map(photo -> String.format("http://localhost:8080/products/%d/photos/%d", product.getId(), photo.getId()))
-                .collect(Collectors.toList());
-
-        // Tworzymy DTO zwracane po zapisaniu
-        MotherboardDto motherboardDto = new MotherboardDto();
-        motherboardDto.setId(product.getId());
-        motherboardDto.setManufacturer(product.getManufacturer());
-        motherboardDto.setModel(product.getModel());
-        motherboardDto.setPrice(product.getPrice());
-        motherboardDto.setChipset(motherboard.getChipset());
-        motherboardDto.setFormFactor(motherboard.getFormFactor());
-        motherboardDto.setSupportedMemory(motherboard.getSupportedMemory());
-        motherboardDto.setSocket(motherboard.getSocket());
-        motherboardDto.setCpuArchitecture(motherboard.getCpuArchitecture());
-        motherboardDto.setInternalConnectors(motherboard.getInternalConnectors());
-        motherboardDto.setExternalConnectors(motherboard.getExternalConnectors());
-        motherboardDto.setMemorySlots(motherboard.getMemorySlots());
-        motherboardDto.setAudioSystem(motherboard.getAudioSystem());
-        motherboardDto.setPhotos(photoUrls);  // Ustawiamy zdjęcia
-
-        return motherboardDto;
     }
+
+    // Retrieve saved photos and generate URLs
+    List<Photo> savedPhotos = photoRepository.findByProductId(product.getId());
+    List<String> photoUrls = savedPhotos.stream()
+            .map(photo -> String.format("http://localhost:8080/products/%d/photos/%d", product.getId(), photo.getId()))
+            .collect(Collectors.toList());
+
+    // Create and return MotherboardDto
+    MotherboardDto motherboardDto = new MotherboardDto();
+    motherboardDto.setId(product.getId());
+    motherboardDto.setManufacturer(product.getManufacturer());
+    motherboardDto.setModel(product.getModel());
+    motherboardDto.setPrice(product.getPrice());
+    motherboardDto.setChipset(motherboard.getChipset());
+    motherboardDto.setFormFactor(motherboard.getFormFactor());
+    motherboardDto.setSupportedMemory(motherboard.getSupportedMemory());
+    motherboardDto.setSocket(motherboard.getSocket());
+    motherboardDto.setCpuArchitecture(motherboard.getCpuArchitecture());
+    motherboardDto.setInternalConnectors(motherboard.getInternalConnectors());
+    motherboardDto.setExternalConnectors(motherboard.getExternalConnectors());
+    motherboardDto.setMemorySlots(motherboard.getMemorySlots());
+    motherboardDto.setAudioSystem(motherboard.getAudioSystem());
+    motherboardDto.setPhotos(photoUrls);  // Set photo URLs
+
+    return motherboardDto;
+}
+
 
     // Metoda do rozwiązywania unikalnej nazwy pliku
     private String resolveFileName(String originalFileName) {
         String fileName = originalFileName;
-        Path filePath = Paths.get("public/", fileName);
+        Path filePath = Paths.get("C:\\Users\\piotr\\OneDrive\\Pulpit\\ELITE_GEAR_BACKEND\\src\\main\\resources\\public\\", fileName);
 
         // Jeśli plik o tej nazwie istnieje, dodajemy timestamp
         if (Files.exists(filePath)) {
