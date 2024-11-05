@@ -1,7 +1,11 @@
 package com.elite_gear_backend.entity;
 
+import com.elite_gear_backend.enums.Role;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -24,14 +28,12 @@ public class User {
     @Column(name = "email", unique = true, nullable = false)
     private String email;
 
-    @Column(name = "login", unique = true, nullable = false)
-    private String login;
-
     @Column(name = "password", nullable = false)
     private String password;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
-    private String type;
+    private Role type;
 
     public User() {
     }
@@ -71,14 +73,6 @@ public class User {
         this.email = email;
     }
 
-    public String getLogin() {
-        return login;
-    }
-
-    public void setLogin(String login) {
-        this.login = login;
-    }
-
     public String getPassword() {
         return password;
     }
@@ -87,11 +81,11 @@ public class User {
         this.password = password;
     }
 
-    public String getType() {
+    public Role getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(Role type) {
         this.type = type;
     }
 }

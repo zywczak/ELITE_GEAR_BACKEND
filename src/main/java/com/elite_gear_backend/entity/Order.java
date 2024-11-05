@@ -35,6 +35,9 @@ public class Order {
     @Column(name = "postal_code", nullable = false, columnDefinition = "varchar(6)")
     private String postalCode;
 
+    @Column(name = "house_number", nullable = false, columnDefinition = "varchar(10)")
+    private String houseNumber;
+
     @Column(name = "amount", nullable = false)
     private double amount;
 
@@ -84,6 +87,14 @@ public class Order {
 
     public void setStreet(String street) {
         this.street = street;
+    }
+
+    public String getHouseNumber() {
+        return houseNumber;
+    }
+
+    public void setHouseNumber(String houseNumber) {
+        this.houseNumber = houseNumber;
     }
 
     public String getPostalCode() {

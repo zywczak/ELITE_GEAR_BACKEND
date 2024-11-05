@@ -19,9 +19,6 @@ public class SignUpDto {
     private String surname;
 
     @NotEmpty
-    private String login;
-
-    @NotEmpty
     private String email;
 
     @NotEmpty

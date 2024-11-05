@@ -5,7 +5,6 @@ public class OrderRequestDto {
     private String street;
     private String houseNumber;
     private String postalCode;
-    private double amount;
     
     // Gettery i settery
     public String getCity() {
@@ -38,13 +37,5 @@ public class OrderRequestDto {
 
     public void setPostalCode(String postalCode) {
         this.postalCode = postalCode;
-    }
-
-    public double getAmount() {
-        return amount;
-    }
-
-    public void setAmount(double amount) {
-        this.amount = amount;
     }
 }
