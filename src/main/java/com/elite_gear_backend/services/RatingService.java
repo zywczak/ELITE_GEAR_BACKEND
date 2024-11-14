@@ -32,16 +32,20 @@ public class RatingService {
 
     public List<RatingDto> getRatingsByProductId(Long productId) {
         List<Rating> ratings = ratingRepository.findByProductId(productId);
-
-        return ratings.stream().map(rating -> {
-            RatingDto dto = new RatingDto();
-            dto.setRatingId(rating.getId());
-            dto.setUserName(rating.getUser().getName() + " " + rating.getUser().getSurname());
-            dto.setRate(rating.getRate());
-            dto.setComment(rating.getComment());
-            dto.setCreatedTime(rating.getCreatedTime().toString());
-            return dto;
-        }).collect(Collectors.toList());
+    
+        return ratings.stream()
+                .filter(rating -> rating.getComment() != null && !rating.getComment().isEmpty()) // Filter ratings with comments
+                .map(rating -> {
+                    RatingDto dto = new RatingDto();
+                    dto.setRatingId(rating.getId());
+                    dto.setUserName(rating.getUser().getName() + " " + rating.getUser().getSurname());
+                    dto.setUserId(rating.getUser().getId());
+                    dto.setRate(rating.getRate());
+                    dto.setComment(rating.getComment());
+                    dto.setCreatedTime(rating.getCreatedTime().toString());
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional

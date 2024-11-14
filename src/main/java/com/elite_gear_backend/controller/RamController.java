@@ -18,9 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.elite_gear_backend.dto.RAMAddDto;
 import com.elite_gear_backend.dto.RAMDto;
 import com.elite_gear_backend.dto.RamUpdateDto;
-import com.elite_gear_backend.repository.PhotoRepository;
-import com.elite_gear_backend.repository.ProductRepository;
-import com.elite_gear_backend.repository.RamRepository;
 import com.elite_gear_backend.services.RAMService;
 
 @RestController
@@ -30,15 +27,6 @@ public class RamController {
 
     @Autowired
     private RAMService ramService;
-
-    @Autowired
-    private RamRepository ramRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private PhotoRepository photoRepository;
 
     @GetMapping("/{productId}")
     public ResponseEntity<RAMDto> getRAMByProductId(@PathVariable Long productId) {
@@ -68,54 +56,4 @@ public class RamController {
             return ResponseEntity.status(500).body(null);
         }
     }
-
-    // @DeleteMapping("/{id}")
-    // public void deleteRamByProductId(@PathVariable Long productId) {
-    //     ramRepository.findById(productId).ifPresent(ram -> {
-    //         Product product = ram.getProduct();
-
-    //         if (product != null) {
-    //             List<Photo> photos = photoRepository.findByProductId(productId);
-    //             if (!photos.isEmpty()) {
-    //                 photos.forEach(photo -> {
-    //                     String filePath = "C:\\Users\\pjzyw\\OneDrive\\Pulpit\\ELITE_GEAR_BACKEND\\src\\main\\resources\\public\\" + photo.getFileName(); 
-    //                     File photoFile = new File(filePath); 
-    //                     if (photoFile.exists()) {
-    //                         photoFile.delete();
-    //                     }
-
-    //                     photoRepository.delete(photo);
-    //                 });
-    //             }
-
-    //             productRepository.delete(product);
-    //         }
-    //         ramRepository.delete(ram);
-    //     });
-    // }
-
-    // @PutMapping("/{productId}")
-    // public ResponseEntity<RAM> updateRAM(@PathVariable Long productId, @RequestBody RAM updatedRAM) {
-    //     return ramRepository.findById(productId)
-    //         .map(ram -> {
-    //             ram.setSpeed(updatedRAM.getSpeed());
-    //             ram.setCapacity(updatedRAM.getCapacity());
-    //             ram.setVoltage(updatedRAM.getVoltage());
-    //             ram.setModuleCount(updatedRAM.getModuleCount());
-    //             ram.setBacklight(updatedRAM.isBacklight());
-    //             ram.setCooling(updatedRAM.isCooling());
-
-    //             Product product = ram.getProduct();
-    //             if (product != null) {
-    //                 product.setManufacturer(updatedRAM.getProduct().getManufacturer());
-    //                 product.setModel(updatedRAM.getProduct().getModel());
-    //                 product.setPrice(updatedRAM.getProduct().getPrice());
-                    
-    //                 productRepository.save(product);
-    //             }
-
-    //             return ResponseEntity.ok(ramRepository.save(ram));
-    //         })
-    //         .orElseThrow(() -> new IllegalArgumentException("RAM not found with productId " + productId));
-    // }
 }

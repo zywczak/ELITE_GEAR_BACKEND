@@ -3,11 +3,20 @@ package com.elite_gear_backend.dto;
 public class RatingDto {
     private Long ratingId;
     private String userName;
+    private Long userId;
     private Long rate;
     private String comment;
     private String createdTime;
 
     // Getters and Setters
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
     public Long getRatingId() {
         return ratingId;
     }

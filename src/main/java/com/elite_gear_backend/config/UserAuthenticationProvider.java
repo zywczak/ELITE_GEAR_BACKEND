@@ -1,21 +1,23 @@
 package com.elite_gear_backend.config;
 
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Date;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Component;
+
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.elite_gear_backend.dto.UserDTO;
 import com.elite_gear_backend.services.UserService;
+
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Component;
-
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Date;
 
 @RequiredArgsConstructor
 @Component
@@ -45,14 +47,14 @@ public class UserAuthenticationProvider {
                 .withClaim("type", user.getType().name())
                 .withClaim("name", user.getName())
                 .withClaim("surname", user.getSurname())
+                .withClaim("id", user.getId())
                 .sign(algorithm);
     }    
 
     public Authentication validateToken(String token) {
         Algorithm algorithm = Algorithm.HMAC256(secretKey);
 
-        JWTVerifier verifier = JWT.require(algorithm)
-                .build();
+        JWTVerifier verifier = JWT.require(algorithm).build();
 
         DecodedJWT decoded = verifier.verify(token);
 

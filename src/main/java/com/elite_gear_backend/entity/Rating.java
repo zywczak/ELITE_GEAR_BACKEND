@@ -26,13 +26,13 @@ public class Rating {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(name = "rate")
+    @Column(name = "rate", nullable = false)
     private Long rate;
 
     @Column(name = "comment")
     private String comment;
 
-    @Column(name = "time", updatable = false)
+    @Column(name = "time", updatable = true)
     private LocalDateTime createdTime = LocalDateTime.now();
     
     public Long getId() {

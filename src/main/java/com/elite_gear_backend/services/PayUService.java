@@ -82,7 +82,7 @@ public class PayUService {
     
             // Prepare the order payload
             Map<String, Object> order = new HashMap<>();
-            order.put("notifyUrl", "http://localhost/confirm"); // URL do odbierania powiadomień o statusie
+            order.put("notifyUrl", "http://localhost:8080/orders/confirm"); // URL do odbierania powiadomień o statusie
             order.put("customerIp", "127.0.0.1"); // Zamień na rzeczywisty adres IP
             order.put("merchantPosId", clientId);
             order.put("description", "Opłata zamówienia");
@@ -101,9 +101,6 @@ public class PayUService {
             product.put("unitPrice", totalAmount); // Use integer unit price in grosze
             product.put("quantity", 1);
             order.put("products", List.of(product));
-    
-            // Dodaj redirectUri
-            order.put("redirectUri", "http://localhost/confirm"); // URL przekierowania po płatności
     
             // Convert the order to JSON
             String orderJson = objectMapper.writeValueAsString(order);
@@ -148,6 +145,7 @@ public class PayUService {
     // Method to verify payment status using transaction ID
     public boolean verifyPayment(String transactionId) {
         try {
+            System.out.println("Response Body: potwierdzenie tu robimy");
             String accessToken = getAccessToken();
 
             HttpRequest request = HttpRequest.newBuilder()
