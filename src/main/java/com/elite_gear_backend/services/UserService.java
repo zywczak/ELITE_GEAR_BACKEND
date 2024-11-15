@@ -10,11 +10,9 @@ import com.elite_gear_backend.exceptions.AppException;
 import com.elite_gear_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.security.core.Authentication;
 
 import java.nio.CharBuffer;
@@ -58,12 +56,6 @@ public class UserService {
                 .orElseThrow(() -> new AppException("Unknown user", HttpStatus.NOT_FOUND));
         return toUserDto(user);
     }
-
-    // private User getCurrentUser() {
-    //     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    //     UserDTO userDto = (UserDTO) authentication.getPrincipal();
-    //     return userService.findById(userDto.getId());
-    // }
 
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

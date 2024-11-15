@@ -48,8 +48,6 @@ public class SecurityConfig {
         return source;
     }
 
-
-
     private final UserAuthenticationProvider userAuthenticationProvider;
 
     @SuppressWarnings("removal")
