@@ -6,7 +6,6 @@ import org.springframework.stereotype.Repository;
 import com.elite_gear_backend.entity.Category;
 
 @Repository
-public interface CategoryRepository extends JpaRepository<Category, Long> {
-    
+public interface CategoryRepository extends JpaRepository<Category, Long> { 
 }
 

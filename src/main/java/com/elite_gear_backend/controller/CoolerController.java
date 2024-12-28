@@ -31,31 +31,24 @@ public class CoolerController {
     }    
 
     @GetMapping("/{productId}")
-    public ResponseEntity<CoolerDto> getCoolerByProductId(@PathVariable Long productId) {
-        Optional<CoolerDto> coolerDtoOpt = coolerService.getCoolerByProductId(productId);
-
-        return coolerDtoOpt
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<Optional<CoolerDto>> getCoolerByProductId(@PathVariable Long productId) {
+        Optional<CoolerDto> coolerDto = coolerService.getCoolerByProductId(productId);
+        return ResponseEntity.ok(coolerDto);
     }
 
     @PutMapping("/{productId}")
-    public ResponseEntity<CoolerDto> updateCooler(@PathVariable Long productId, @RequestBody CoolerUpdateDto coolerUpdateDto) {
-        Optional<CoolerDto> updatedCoolerOpt = coolerService.updateCooler(productId, coolerUpdateDto);
-
-        return updatedCoolerOpt
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<String> updateCooler(@PathVariable Long productId, @RequestBody CoolerUpdateDto coolerUpdateDto) {
+        coolerService.updateCooler(productId, coolerUpdateDto);
+        return ResponseEntity.ok("Cooler updated successfully");
     }
 
     @PostMapping
-    public ResponseEntity<CoolerDto> addCooler(
-            @ModelAttribute CoolerAddDto coolerAddDto) {
+    public ResponseEntity<String> addCooler(@ModelAttribute CoolerAddDto coolerAddDto) {
         try {
-            CoolerDto createdCooler = coolerService.addCooler(coolerAddDto);
-            return ResponseEntity.status(201).body(createdCooler);
+            coolerService.addCooler(coolerAddDto);
+            return ResponseEntity.status(201).body("Cooler added successfully");
         } catch (IOException e) {
-            return ResponseEntity.status(500).body(null);
+            return ResponseEntity.status(500).body("Wrong data");
         }
     }
 }

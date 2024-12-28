@@ -1,22 +1,23 @@
 package com.elite_gear_backend.services;
 
+import java.nio.CharBuffer;
+import java.util.Optional;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
 import com.elite_gear_backend.dto.CredentialsDto;
 import com.elite_gear_backend.dto.SignUpDto;
 import com.elite_gear_backend.dto.UserDTO;
-import com.elite_gear_backend.dto.UserProfileDto;
 import com.elite_gear_backend.entity.User;
 import com.elite_gear_backend.enums.Role;
 import com.elite_gear_backend.exceptions.AppException;
 import com.elite_gear_backend.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.security.core.Authentication;
 
-import java.nio.CharBuffer;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Service
@@ -27,7 +28,7 @@ public class UserService {
 
     public UserDTO login(CredentialsDto credentialsDto) {
         User user = userRepository.findByEmail(credentialsDto.getEmail())
-                .orElseThrow(() -> new AppException("Unknown user", HttpStatus.NOT_FOUND));
+            .orElseThrow(() -> new AppException("Unknown user", HttpStatus.NOT_FOUND));
 
         if (passwordEncoder.matches(CharBuffer.wrap(credentialsDto.getPassword()), user.getPassword())) {
             return toUserDto(user);
@@ -39,7 +40,7 @@ public class UserService {
         Optional<User> optionalUser = userRepository.findByEmail(userDto.getEmail());
 
         if (optionalUser.isPresent()) {
-            throw new AppException("Login already exists", HttpStatus.BAD_REQUEST);
+            throw new AppException("E-mail already exists", HttpStatus.BAD_REQUEST);
         }
 
         User user = signUpToUser(userDto);
@@ -53,7 +54,7 @@ public class UserService {
 
     public UserDTO findByEmail(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException("Unknown user", HttpStatus.NOT_FOUND));
+            .orElseThrow(() -> new AppException("Unknown user", HttpStatus.NOT_FOUND));
         return toUserDto(user);
     }
 
@@ -64,10 +65,6 @@ public class UserService {
             return userRepository.findByEmail(email).orElseThrow(() -> new AppException("Unknown user", HttpStatus.NOT_FOUND));
         }
         throw new AppException("User not logged in", HttpStatus.UNAUTHORIZED);
-    }
-
-    public User findById(Long id) {
-        return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     private UserDTO toUserDto(User user) {
@@ -86,12 +83,5 @@ public class UserService {
         user.setSurname(signUpDto.getSurname());
         user.setEmail(signUpDto.getEmail());
         return user;
-    }
-
-    public UserProfileDto getUserProfile(User user) {
-        return UserProfileDto.builder()
-                .name(user.getName())
-                .surname(user.getSurname())
-                .build();
     }
 }

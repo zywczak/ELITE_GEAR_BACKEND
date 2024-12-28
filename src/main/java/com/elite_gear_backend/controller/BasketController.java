@@ -2,7 +2,6 @@ package com.elite_gear_backend.controller;
 
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.elite_gear_backend.dto.BasketDto;
-import com.elite_gear_backend.entity.Basket;
 import com.elite_gear_backend.entity.User;
 import com.elite_gear_backend.services.BasketService;
 import com.elite_gear_backend.services.UserService;
@@ -43,23 +41,23 @@ public class BasketController {
     }
 
     @PostMapping
-    public ResponseEntity<Basket> addProductToBasket(@RequestBody BasketDto basketDto) {
+    public ResponseEntity<String> addProductToBasket(@RequestBody BasketDto basketDto) {
         User user = userService.getCurrentUser();
-        Basket basket = basketService.addProductToBasket(user, basketDto);
-        return new ResponseEntity<>(basket, HttpStatus.CREATED);
+        basketService.addProductToBasket(user, basketDto);
+        return ResponseEntity.ok("Product added successfully");
     }
     
     @DeleteMapping("/{productId}")
     public ResponseEntity<String> removeProductFromBasket(@PathVariable Long productId) {
         User user = userService.getCurrentUser();
-        String message = basketService.removeProductFromBasket(user, productId);
-        return ResponseEntity.ok(message);
+        basketService.removeProductFromBasket(user, productId);
+        return ResponseEntity.ok("Product removed successfully");
     }
 
     @DeleteMapping("/remove/{productId}")
     public ResponseEntity<String> removeProductFromBasketForUser(@PathVariable Long productId) {
         User user = userService.getCurrentUser();
-        String message = basketService.removeProductCompletely(user, productId);
-        return ResponseEntity.ok(message);
+        basketService.removeProductCompletely(user, productId);
+        return ResponseEntity.ok("Product removed successfully");
     }
 }

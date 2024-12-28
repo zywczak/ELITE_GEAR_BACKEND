@@ -29,31 +29,24 @@ public class RamController {
     private RAMService ramService;
 
     @GetMapping("/{productId}")
-    public ResponseEntity<RAMDto> getRAMByProductId(@PathVariable Long productId) {
-        Optional<RAMDto> ramDtoOpt = ramService.getRAMByProductId(productId);
-
-        return ramDtoOpt
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<Optional<RAMDto>> getRAMByProductId(@PathVariable Long productId) {
+        Optional<RAMDto> ramDto = ramService.getRAMByProductId(productId);
+        return ResponseEntity.ok(ramDto);
     }
 
     @PutMapping("/{productId}")
-    public ResponseEntity<RAMDto> updateRam(@PathVariable Long productId, @RequestBody RamUpdateDto ramUpdateDto) {
-        Optional<RAMDto> updatedRamOpt = ramService.updateRam(productId, ramUpdateDto);
-
-        return updatedRamOpt
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<String> updateRam(@PathVariable Long productId, @RequestBody RamUpdateDto ramUpdateDto) {
+        ramService.updateRam(productId, ramUpdateDto);
+        return ResponseEntity.ok("RAM updated successfully");
     }
 
     @PostMapping
-    public ResponseEntity<RAMDto> addRam(
-            @ModelAttribute RAMAddDto ramAddDto) {
+    public ResponseEntity<String> addRam(@ModelAttribute RAMAddDto ramAddDto) {
         try {
-            RAMDto ramDto = ramService.addRam(ramAddDto);
-            return ResponseEntity.status(201).body(ramDto);
+            ramService.addRam(ramAddDto);
+            return ResponseEntity.status(201).body("RAM added successfully");
         } catch (IOException e) {
-            return ResponseEntity.status(500).body(null);
+            return ResponseEntity.status(500).body("Wrong data");
         }
     }
 }

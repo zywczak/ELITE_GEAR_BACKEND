@@ -1,31 +1,24 @@
 package com.elite_gear_backend.services;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.elite_gear_backend.dto.MotherboardAddDto;
 import com.elite_gear_backend.dto.MotherboardDto;
 import com.elite_gear_backend.dto.MotherboardUpdateDto;
 import com.elite_gear_backend.entity.Category;
 import com.elite_gear_backend.entity.Motherboard;
-import com.elite_gear_backend.entity.Photo;
 import com.elite_gear_backend.entity.Product;
-import com.elite_gear_backend.entity.Rating;
+import com.elite_gear_backend.exceptions.AppException;
 import com.elite_gear_backend.repository.CategoryRepository;
 import com.elite_gear_backend.repository.MotherboardRepository;
-import com.elite_gear_backend.repository.PhotoRepository;
 import com.elite_gear_backend.repository.ProductRepository;
-import com.elite_gear_backend.repository.RatingRepository;
 
 import jakarta.transaction.Transactional;
 
@@ -33,45 +26,33 @@ import jakarta.transaction.Transactional;
 public class MotherboardService {
 
     private final MotherboardRepository motherboardRepository;
-    private final PhotoRepository photoRepository;
-    private final RatingRepository ratingRepository;
     private final ProductRepository productRepository;
-    @Autowired
-    private CategoryRepository categoryRepository; // Inject the CategoryRepository
+    private final PhotoService photoService;
+    private final RatingService ratingService;
 
-    public MotherboardService(MotherboardRepository motherboardRepository, PhotoRepository photoRepository, RatingRepository ratingRepository, ProductRepository productRepository) {
+    @Autowired
+    private CategoryRepository categoryRepository;
+
+    public MotherboardService(MotherboardRepository motherboardRepository,ProductRepository productRepository, PhotoService photoService, RatingService ratingService) {
         this.motherboardRepository = motherboardRepository;
-        this.photoRepository = photoRepository;
-        this.ratingRepository = ratingRepository;
-        this.productRepository = productRepository; // Inject ProductRepository
+        this.productRepository = productRepository;
+        this.photoService = photoService;
+        this.ratingService = ratingService;
     }
 
     public Optional<MotherboardDto> getMotherboardByProductId(Long productId) {
-        // Znajdź płytę główną na podstawie ID produktu
         Optional<Motherboard> motherboardOpt = motherboardRepository.findByProductId(productId);
-        
+
         if (motherboardOpt.isEmpty()) {
-            return Optional.empty();
+            throw new AppException("Motherboard with product ID " + productId + " not found", HttpStatus.NOT_FOUND);
         }
 
         Motherboard motherboard = motherboardOpt.get();
-        
-        // Pobierz zdjęcia produktu
-        List<Photo> photos = photoRepository.findByProductId(motherboard.getProduct().getId());
-        List<String> photoUrls = photos.isEmpty()
-                ? List.of("http://localhost:8080/products/brakfoto") // Domyślne zdjęcie
-                : photos.stream()
-                        .map(photo -> String.format("http://localhost:8080/products/%d/photos/%d", motherboard.getProduct().getId(), photo.getId()))
-                        .collect(Collectors.toList());
 
-        // Oblicz średnią ocenę
-        List<Rating> ratings = ratingRepository.findByProductId(motherboard.getProduct().getId());
-        double averageRating = ratings.stream()
-                .mapToDouble(Rating::getRate)
-                .average()
-                .orElse(0.0);
+        List<String>photoUrls = photoService.getPhotosByProduct(motherboard.getProduct().getId());
 
-        // Stwórz obiekt MotherboardDto
+        double averageRating = ratingService.getRate(motherboard.getProduct().getId());
+
         MotherboardDto motherboardDto = new MotherboardDto();
         motherboardDto.setId(motherboard.getProduct().getId());
         motherboardDto.setManufacturer(motherboard.getProduct().getManufacturer());
@@ -93,23 +74,28 @@ public class MotherboardService {
     }
 
     @Transactional
-    public Optional<MotherboardDto> updateMotherboard(Long productId, MotherboardUpdateDto motherboardUpdateDto) {
-        // Find motherboard by product ID
+    public void updateMotherboard(Long productId, MotherboardUpdateDto motherboardUpdateDto) {
         Optional<Motherboard> motherboardOpt = motherboardRepository.findByProductId(productId);
+
         if (motherboardOpt.isEmpty()) {
-            return Optional.empty();
+            throw new AppException("Motherboard with product ID " + productId + " not found", HttpStatus.NOT_FOUND);
         }
 
         Motherboard motherboard = motherboardOpt.get();
         Product product = motherboard.getProduct();
 
-        // Update product fields (manufacturer, model, price)
         product.setManufacturer(motherboardUpdateDto.getManufacturer());
         product.setModel(motherboardUpdateDto.getModel());
         product.setPrice(motherboardUpdateDto.getPrice());
-        productRepository.save(product);
-
-        // Update motherboard fields
+        
+        try {
+            productRepository.save(product);
+        } catch (DataAccessException e) {
+            throw new AppException("Error editing motherboard: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            throw new AppException("Unexpected error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }  
+        
         motherboard.setChipset(motherboardUpdateDto.getChipset());
         motherboard.setFormFactor(motherboardUpdateDto.getFormFactor());
         motherboard.setSupportedMemory(motherboardUpdateDto.getSupportedMemory());
@@ -120,123 +106,47 @@ public class MotherboardService {
         motherboard.setMemorySlots(motherboardUpdateDto.getMemorySlots());
         motherboard.setAudioSystem(motherboardUpdateDto.getAudioSystem());
 
-        motherboardRepository.save(motherboard);
-
-        // Convert updated Motherboard to DTO and return
-        MotherboardDto updatedDto = new MotherboardDto();
-        updatedDto.setId(product.getId());
-        updatedDto.setManufacturer(product.getManufacturer());
-        updatedDto.setModel(product.getModel());
-        updatedDto.setPrice(product.getPrice());
-        updatedDto.setChipset(motherboard.getChipset());
-        updatedDto.setFormFactor(motherboard.getFormFactor());
-        updatedDto.setSupportedMemory(motherboard.getSupportedMemory());
-        updatedDto.setSocket(motherboard.getSocket());
-        updatedDto.setCpuArchitecture(motherboard.getCpuArchitecture());
-        updatedDto.setInternalConnectors(motherboard.getInternalConnectors());
-        updatedDto.setExternalConnectors(motherboard.getExternalConnectors());
-        updatedDto.setMemorySlots(motherboard.getMemorySlots());
-        updatedDto.setAudioSystem(motherboard.getAudioSystem());
-
-        return Optional.of(updatedDto);
+        try {
+            motherboardRepository.save(motherboard);
+        } catch (DataAccessException e) {
+            throw new AppException("Error editing motherboard: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            throw new AppException("Unexpected error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }  
     }
 
-    public MotherboardDto addMotherboard(MotherboardAddDto motherboardAddDto) throws IOException {
-        // Create a new Product entity
-        Product product = new Product();
-        product.setManufacturer(motherboardAddDto.getManufacturer());
-        product.setModel(motherboardAddDto.getModel());
-        product.setPrice(motherboardAddDto.getPrice());
-    
-        // Retrieve and set category (use appropriate ID for motherboards)
-        Category category = categoryRepository.findById(4L)  // Adjust category ID as needed
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
-        product.setCategory(category);
-        productRepository.save(product); // Save the product in the database
-    
-        // Create and save Motherboard entity
-        Motherboard motherboard = new Motherboard();
-        motherboard.setProduct(product); // This relationship must remain
-        motherboard.setChipset(motherboardAddDto.getChipset());
-        motherboard.setFormFactor(motherboardAddDto.getFormFactor());
-        motherboard.setSupportedMemory(motherboardAddDto.getSupportedMemory());
-        motherboard.setSocket(motherboardAddDto.getSocket());
-        motherboard.setCpuArchitecture(motherboardAddDto.getCpuArchitecture());
-        motherboard.setInternalConnectors(motherboardAddDto.getInternalConnectors());
-        motherboard.setExternalConnectors(motherboardAddDto.getExternalConnectors());
-        motherboard.setMemorySlots(motherboardAddDto.getMemorySlots());
-        motherboard.setAudioSystem(motherboardAddDto.getAudioSystem());
-        
-        motherboardRepository.save(motherboard); // Save motherboard entity
+    public void addMotherboard(MotherboardAddDto motherboardAddDto) throws IOException {
+        try{
+            Product product = new Product();
+            product.setManufacturer(motherboardAddDto.getManufacturer());
+            product.setModel(motherboardAddDto.getModel());
+            product.setPrice(motherboardAddDto.getPrice());
 
-    // Save uploaded photos
-    if (motherboardAddDto.getPhotos() != null && !motherboardAddDto.getPhotos().isEmpty()) {
-        for (MultipartFile photoFile : motherboardAddDto.getPhotos()) {
-            if (!photoFile.isEmpty()) {
-                String originalFileName = photoFile.getOriginalFilename();
-                String fileName = resolveFileName(originalFileName);
-                Path filePath = Paths.get("C:\\Users\\piotr\\OneDrive\\Pulpit\\ELITE_GEAR_BACKEND\\src\\main\\resources\\public\\", fileName);
-                Files.copy(photoFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            Category category = categoryRepository.findById(4L)
+                    .orElseThrow(() -> new AppException("Category for motherboards not found", HttpStatus.NOT_FOUND));
+            product.setCategory(category);
+            productRepository.save(product);
 
-                // Save Photo entity
-                Photo photo = new Photo();
-                photo.setFileName(fileName);
-                photo.setProduct(product);
-                photoRepository.save(photo);
-            }
+            Motherboard motherboard = new Motherboard();
+            motherboard.setProduct(product);
+            motherboard.setChipset(motherboardAddDto.getChipset());
+            motherboard.setFormFactor(motherboardAddDto.getFormFactor());
+            motherboard.setSupportedMemory(motherboardAddDto.getSupportedMemory());
+            motherboard.setSocket(motherboardAddDto.getSocket());
+            motherboard.setCpuArchitecture(motherboardAddDto.getCpuArchitecture());
+            motherboard.setInternalConnectors(motherboardAddDto.getInternalConnectors());
+            motherboard.setExternalConnectors(motherboardAddDto.getExternalConnectors());
+            motherboard.setMemorySlots(motherboardAddDto.getMemorySlots());
+            motherboard.setAudioSystem(motherboardAddDto.getAudioSystem());
+
+            motherboardRepository.save(motherboard);
+
+            photoService.savePhoto(motherboardAddDto.getPhotos(), product);
+
+        } catch (DataAccessException e) {
+            throw new AppException("Error updating ram: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (AppException e) {
+            throw new AppException("Unexpected error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-    }
-
-    // Retrieve saved photos and generate URLs
-    List<Photo> savedPhotos = photoRepository.findByProductId(product.getId());
-    List<String> photoUrls = savedPhotos.stream()
-            .map(photo -> String.format("http://localhost:8080/products/%d/photos/%d", product.getId(), photo.getId()))
-            .collect(Collectors.toList());
-
-    // Create and return MotherboardDto
-    MotherboardDto motherboardDto = new MotherboardDto();
-    motherboardDto.setId(product.getId());
-    motherboardDto.setManufacturer(product.getManufacturer());
-    motherboardDto.setModel(product.getModel());
-    motherboardDto.setPrice(product.getPrice());
-    motherboardDto.setChipset(motherboard.getChipset());
-    motherboardDto.setFormFactor(motherboard.getFormFactor());
-    motherboardDto.setSupportedMemory(motherboard.getSupportedMemory());
-    motherboardDto.setSocket(motherboard.getSocket());
-    motherboardDto.setCpuArchitecture(motherboard.getCpuArchitecture());
-    motherboardDto.setInternalConnectors(motherboard.getInternalConnectors());
-    motherboardDto.setExternalConnectors(motherboard.getExternalConnectors());
-    motherboardDto.setMemorySlots(motherboard.getMemorySlots());
-    motherboardDto.setAudioSystem(motherboard.getAudioSystem());
-    motherboardDto.setPhotos(photoUrls);  // Set photo URLs
-
-    return motherboardDto;
-}
-
-
-    // Metoda do rozwiązywania unikalnej nazwy pliku
-    private String resolveFileName(String originalFileName) {
-        String fileName = originalFileName;
-        Path filePath = Paths.get("C:\\Users\\piotr\\OneDrive\\Pulpit\\ELITE_GEAR_BACKEND\\src\\main\\resources\\public\\", fileName);
-
-        // Jeśli plik o tej nazwie istnieje, dodajemy timestamp
-        if (Files.exists(filePath)) {
-            String fileExtension = "";
-            String baseName = "";
-
-            int dotIndex = originalFileName.lastIndexOf(".");
-            if (dotIndex > 0) {
-                baseName = originalFileName.substring(0, dotIndex);
-                fileExtension = originalFileName.substring(dotIndex);
-            } else {
-                baseName = originalFileName;
-            }
-
-            // Dodajemy timestamp do nazwy pliku
-            String timestamp = String.valueOf(System.currentTimeMillis());
-            fileName = baseName + "_" + timestamp + fileExtension;
-        }
-
-        return fileName;
     }
 }

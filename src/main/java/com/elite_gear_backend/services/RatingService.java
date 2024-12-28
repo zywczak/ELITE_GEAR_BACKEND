@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.elite_gear_backend.dto.RateDto;
@@ -12,6 +14,7 @@ import com.elite_gear_backend.dto.RatingDto;
 import com.elite_gear_backend.entity.Product;
 import com.elite_gear_backend.entity.Rating;
 import com.elite_gear_backend.entity.User;
+import com.elite_gear_backend.exceptions.AppException;
 import com.elite_gear_backend.repository.ProductRepository;
 import com.elite_gear_backend.repository.RatingRepository;
 import com.elite_gear_backend.repository.UserRepository;
@@ -22,8 +25,8 @@ import jakarta.transaction.Transactional;
 public class RatingService {
 
     @Autowired
-    private RatingRepository ratingRepository;
-
+    private  RatingRepository ratingRepository;
+    
     @Autowired
     private ProductRepository productRepository;
 
@@ -32,9 +35,13 @@ public class RatingService {
 
     public List<RatingDto> getRatingsByProductId(Long productId) {
         List<Rating> ratings = ratingRepository.findByProductId(productId);
-    
+
+        if (ratings.isEmpty()) {
+            throw new AppException("No ratings found for the product", HttpStatus.NOT_FOUND);
+        }
+
         return ratings.stream()
-                .filter(rating -> rating.getComment() != null && !rating.getComment().isEmpty()) // Filter ratings with comments
+                .filter(rating -> rating.getComment() != null && !rating.getComment().isEmpty())
                 .map(rating -> {
                     RatingDto dto = new RatingDto();
                     dto.setRatingId(rating.getId());
@@ -49,16 +56,16 @@ public class RatingService {
     }
 
     @Transactional
-    public Optional<Rating> addOrUpdateRating(Long userId, RateDto ratingUpdateDto) {
+    public void addOrUpdateRating(Long userId, RateDto ratingUpdateDto) {
         Optional<Product> productOpt = productRepository.findById(ratingUpdateDto.getProductId());
         if (productOpt.isEmpty()) {
-            return Optional.empty(); // Produkt nie istnieje
+            throw new AppException("Product not found", HttpStatus.NOT_FOUND);
         }
 
         Product product = productOpt.get();
         Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isEmpty()) {
-            return Optional.empty(); // Użytkownik nie istnieje
+            throw new AppException("User not found", HttpStatus.NOT_FOUND);
         }
 
         User user = userOpt.get();
@@ -66,30 +73,54 @@ public class RatingService {
 
         Rating rating;
         if (existingRatingOpt.isPresent()) {
-            // Użytkownik już ocenił ten produkt, więc aktualizujemy komentarz
             rating = existingRatingOpt.get();
             rating.setRate(ratingUpdateDto.getRate());
             rating.setComment(ratingUpdateDto.getComment());
         } else {
-            // Użytkownik jeszcze nie ocenił tego produktu, więc dodajemy nowy komentarz
             rating = new Rating();
             rating.setUser(user);
             rating.setProduct(product);
             rating.setRate(ratingUpdateDto.getRate());
             rating.setComment(ratingUpdateDto.getComment());
         }
-
-        ratingRepository.save(rating);
-        return Optional.of(rating);
+        
+        try {
+            ratingRepository.save(rating);
+        } catch (DataAccessException e) {
+            throw new AppException("Error saving rating: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            throw new AppException("Unexpected error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @Transactional
-    public boolean deleteRating(Long userId, Long ratingId) {
+    public void deleteRating(Long userId, Long ratingId) {
         Optional<Rating> ratingOpt = ratingRepository.findById(ratingId);
-        if (ratingOpt.isPresent() && ratingOpt.get().getUser().getId().equals(userId)) {
-            ratingRepository.delete(ratingOpt.get());
-            return true;
+        if (ratingOpt.isPresent()) {
+            Rating rating = ratingOpt.get();
+            if (rating.getUser().getId().equals(userId)) {
+                try {
+                    ratingRepository.delete(rating);
+                } catch (DataAccessException e) {
+                    throw new AppException("Error deleting rating: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+                } catch (Exception e) {
+                    throw new AppException("Unexpected error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+                }    
+            } else {
+                throw new AppException("User is not authorized to delete this rating", HttpStatus.FORBIDDEN);
+            }
+        } else {
+            throw new AppException("Rating not found", HttpStatus.NOT_FOUND);
         }
-        return false; 
     }
+
+    public double getRate(Long productId){
+        List<Rating> ratings = ratingRepository.findByProductId(productId);
+        double averageRating = ratings.stream()
+            .mapToDouble(Rating::getRate)
+            .average()
+            .orElse(0.0);
+    return averageRating;
+    }
+
 }

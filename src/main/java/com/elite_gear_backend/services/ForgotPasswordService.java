@@ -4,12 +4,14 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Date;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.elite_gear_backend.dto.ChangePassword;
 import com.elite_gear_backend.entity.ForgotPassword;
 import com.elite_gear_backend.entity.User;
+import com.elite_gear_backend.exceptions.AppException;
 import com.elite_gear_backend.repository.ForgotPasswordRepository;
 import com.elite_gear_backend.repository.UserRepository;
 
@@ -27,35 +29,33 @@ public class ForgotPasswordService {
 
     public String generateAndSendOtp(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Email not found"));
+                .orElseThrow(() -> new AppException("Email not found", HttpStatus.NOT_FOUND));
 
-        // generate 256-bit token
         byte[] rawToken = new byte[32];
         secureRandom.nextBytes(rawToken);
         String plainToken = Base64.getUrlEncoder().withoutPadding().encodeToString(rawToken);
         String otpHashed = passwordEncoder.encode(plainToken);
 
-        //get existing fp or create new
         ForgotPassword fp = forgotPasswordRepository.findByUser(user)
                 .orElse(ForgotPassword.builder()
                         .otp(otpHashed)
-                        .expirationTime(new Date(System.currentTimeMillis() + 300000)) // 5 minutes valid
+                        .expirationTime(new Date(System.currentTimeMillis() + 300000))
                         .user(user)
                         .failedAttempts(1)
                         .blockTime(null)
                         .build());
 
         if (fp.getBlockTime() != null && fp.getBlockTime().after(new Date())) {
-            throw new RuntimeException("Password reset is temporarily blocked due to too many failed attempts.");
+            throw new AppException("Password reset is temporarily blocked due to too many failed attempts.", HttpStatus.FORBIDDEN);
         }
         if (fp.getFailedAttempts() >= 5) {
-            fp.setBlockTime(new Date(System.currentTimeMillis() + 86400000)); // Blockade na 24h
+            fp.setBlockTime(new Date(System.currentTimeMillis() + 86400000));
             forgotPasswordRepository.save(fp);
-            throw new RuntimeException("Account is temporarily locked due to too many failed attempts.");
+            throw new AppException("Account is temporarily locked due to too many failed attempts.", HttpStatus.FORBIDDEN);
         }
 
         fp.setOtp(otpHashed);
-        fp.setExpirationTime(new Date(System.currentTimeMillis() + 300000)); // 5 minutes
+        fp.setExpirationTime(new Date(System.currentTimeMillis() + 300000));
         fp.setFailedAttempts(fp.getFailedAttempts() + 1);
         forgotPasswordRepository.save(fp);
 
@@ -66,21 +66,20 @@ public class ForgotPasswordService {
                 user.getName(),
                 "Request for password recovery, to reset your password follow this link"
         );
-
         return plainToken;
     }
 
     public void changePassword(String otp, String email, ChangePassword changePassword) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Email not found"));
+                .orElseThrow(() -> new AppException("Email not found", HttpStatus.NOT_FOUND));
 
         ForgotPassword fp = forgotPasswordRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Invalid OTP"));
+                .orElseThrow(() -> new AppException("Invalid OTP", HttpStatus.BAD_REQUEST));
 
         verifyOtp(otp, email);
 
         if (!changePassword.password().equals(changePassword.repeatedPassword())) {
-            throw new RuntimeException("Passwords do not match.");
+            throw new AppException("Passwords do not match.", HttpStatus.BAD_REQUEST);
         }
 
         String newEncodedPassword = passwordEncoder.encode(changePassword.password());
@@ -89,45 +88,23 @@ public class ForgotPasswordService {
         forgotPasswordRepository.delete(fp);
     }
 
-    private void verifyOtp(String otp, String email) {
+    public void verifyOtp(String otp, String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Email not found"));
+                .orElseThrow(() -> new AppException("Email not found", HttpStatus.NOT_FOUND));
 
         ForgotPassword fp = forgotPasswordRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("OTP not found for user"));
+                .orElseThrow(() -> new AppException("OTP not found for user", HttpStatus.BAD_REQUEST));
 
         if (fp.getBlockTime() != null && fp.getBlockTime().after(new Date())) {
-            throw new RuntimeException("Account is temporarily locked.");
+            throw new AppException("Account is temporarily locked.", HttpStatus.FORBIDDEN);
         }
 
-        if (fp.getExpirationTime().before(new Date()) ) {
-            throw new RuntimeException("OTP expired");
+        if (fp.getExpirationTime().before(new Date())) {
+            throw new AppException("OTP expired", HttpStatus.BAD_REQUEST);
         }
 
         if (!passwordEncoder.matches(otp, fp.getOtp())) {
-            throw new RuntimeException("is invalid.");
+            throw new AppException("Invalid OTP.", HttpStatus.BAD_REQUEST);
         }
-    }
-
-    public void verifyEmailOtp(String email, String token) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Email not found"));
-    
-        ForgotPassword fp = forgotPasswordRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Invalid OTP"));
-    
-        if (fp.getBlockTime() != null && fp.getBlockTime().after(new Date())) {
-            throw new RuntimeException("Account is temporarily locked.");
-        }
-    
-        if (fp.getExpirationTime().before(new Date())) {
-            throw new RuntimeException("OTP expired");
-        }
-    
-        if (!passwordEncoder.matches(token, fp.getOtp())) {
-            throw new RuntimeException("Invalid token.");
-        }
-    
-        // Mark OTP as verified (if necessary) or simply allow for password change
     }
 }

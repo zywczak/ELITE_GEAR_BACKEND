@@ -7,6 +7,7 @@ import java.util.Date;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import com.auth0.jwt.JWT;
@@ -30,13 +31,12 @@ public class UserAuthenticationProvider {
 
     @PostConstruct
     protected void init() {
-        // this is to avoid having the raw secret key available in the JVM
         secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
     }
 
     public String createToken(UserDTO user) {
         Date now = new Date();
-        Date validity = new Date(now.getTime() + 3600000); // 1 hour
+        Date validity = new Date(now.getTime() + 3600000);
     
         Algorithm algorithm = Algorithm.HMAC256(secretKey);
         return JWT.create()
@@ -60,11 +60,6 @@ public class UserAuthenticationProvider {
 
         UserDTO user = userService.findByEmail(decoded.getSubject());
 
-        return new UsernamePasswordAuthenticationToken(user, null, Arrays.asList(user.getType()));
+        return new UsernamePasswordAuthenticationToken(user, null, Arrays.asList(new SimpleGrantedAuthority("ROLE_" + user.getType())));
     }
-
-    public UserService getUserService() {
-        return userService;
-    }
-
 }

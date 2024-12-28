@@ -30,48 +30,26 @@ public class MotherboardController {
         this.motherboardService = motherboardService;
     }
 
-    // Pobierz płytę główną na podstawie ID produktu
     @GetMapping("/{productId}")
-    public ResponseEntity<MotherboardDto> getMotherboardByProductId(@PathVariable Long productId) {
-        Optional<MotherboardDto> motherboardDtoOpt = motherboardService.getMotherboardByProductId(productId);
-
-        return motherboardDtoOpt
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<Optional<MotherboardDto>> getMotherboardByProductId(@PathVariable Long productId) {
+        Optional<MotherboardDto> motherboardDto = motherboardService.getMotherboardByProductId(productId);
+        return ResponseEntity.ok(motherboardDto);
     }
 
-     // Update motherboard and product details
     @PutMapping("/{productId}")
-    public ResponseEntity<MotherboardDto> updateMotherboard(@PathVariable Long productId, @RequestBody MotherboardUpdateDto motherboardUpdateDto) {
-        Optional<MotherboardDto> updatedMotherboardOpt = motherboardService.updateMotherboard(productId, motherboardUpdateDto);
-
-        return updatedMotherboardOpt
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<String> updateMotherboard(@PathVariable Long productId, @RequestBody MotherboardUpdateDto motherboardUpdateDto) {
+        motherboardService.updateMotherboard(productId, motherboardUpdateDto);
+        return ResponseEntity.ok("Motherboard updated successfully");
     }
 
     @PostMapping
-    public ResponseEntity<MotherboardDto> addMotherboard(
-            @ModelAttribute MotherboardAddDto motherboardAddDto) {
+    public ResponseEntity<String> addMotherboard(@ModelAttribute MotherboardAddDto motherboardAddDto) {
         try {
-            MotherboardDto motherboardDto = motherboardService.addMotherboard(motherboardAddDto);
-            return ResponseEntity.status(201).body(motherboardDto);
+            motherboardService.addMotherboard(motherboardAddDto);
+            return ResponseEntity.status(201).body("Motherboard added successfully");
         } catch (IOException e) {
-            return ResponseEntity.status(500).body(null);
+            return ResponseEntity.status(500).body("Wrong data");
         }
     }
 
-    // @PostMapping
-    // public ResponseEntity<Motherboard> addMotherboard(@RequestBody Motherboard newMotherboard) {
-    //     Product product = newMotherboard.getProduct();
-        
-    //     if (product != null) {
-    //         product = productRepository.save(product);
-    //         newMotherboard.setProduct(product);
-    //     }
-
-    //     Motherboard savedMotherboard = motherboardRepository.save(newMotherboard);
-        
-    //     return ResponseEntity.status(201).body(savedMotherboard);
-    // }
 }

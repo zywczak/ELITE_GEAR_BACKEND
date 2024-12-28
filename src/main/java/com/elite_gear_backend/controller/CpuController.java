@@ -29,31 +29,24 @@ public class CpuController {
     private CPUService cpuService;
 
     @GetMapping("/{productId}")
-    public ResponseEntity<CPUDto> getCPUByProductId(@PathVariable Long productId) {
-        Optional<CPUDto> cpuDtoOpt = cpuService.getCPUByProductId(productId);
-
-        return cpuDtoOpt
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<Optional<CPUDto>> getCPUByProductId(@PathVariable Long productId) {
+        Optional<CPUDto> cpuDto = cpuService.getCPUByProductId(productId);
+        return ResponseEntity.ok(cpuDto);
     }
 
     @PutMapping("/{productId}")
-    public ResponseEntity<CPUDto> updateCpu(@PathVariable Long productId, @RequestBody CpuUpdateDto cpuUpdateDto) {
-        Optional<CPUDto> updatedCpuOpt = cpuService.updateCpu(productId, cpuUpdateDto);
-
-        return updatedCpuOpt
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<String> updateCpu(@PathVariable Long productId, @RequestBody CpuUpdateDto cpuUpdateDto) {
+        cpuService.updateCpu(productId, cpuUpdateDto);
+        return ResponseEntity.ok("CPU updated successfully");
     }
    
     @PostMapping
-    public ResponseEntity<CPUDto> addCpu(
-            @ModelAttribute CPUAddDto cpuAddDto) {
+    public ResponseEntity<String> addCpu(@ModelAttribute CPUAddDto cpuAddDto) {
         try {
-            CPUDto cpuDto = cpuService.addCpu(cpuAddDto);
-            return ResponseEntity.status(201).body(cpuDto);
+            cpuService.addCpu(cpuAddDto);
+            return ResponseEntity.status(201).body("CPU added successfully");
         } catch (IOException e) {
-            return ResponseEntity.status(500).body(null);
+            return ResponseEntity.status(500).body("Wrong data");
         }
     }
 }

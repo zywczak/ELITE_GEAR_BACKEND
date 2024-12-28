@@ -1,5 +1,6 @@
 package com.elite_gear_backend.services;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import com.elite_gear_backend.dto.PayURequest;
 import com.elite_gear_backend.dto.PayUResponse;
+import com.elite_gear_backend.exceptions.AppException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
@@ -36,7 +38,6 @@ public class PayUService {
         this.objectMapper = objectMapper;
     }
 
-    // Method to fetch an access token from PayU
     private String getAccessToken() {
         try {
             Map<String, String> params = new HashMap<>();
@@ -53,17 +54,17 @@ public class PayUService {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == HttpStatus.OK.value()) {
+                @SuppressWarnings("unchecked")
                 Map<String, Object> responseBody = objectMapper.readValue(response.body(), Map.class);
                 return (String) responseBody.get("access_token");
             } else {
-                throw new RuntimeException("Failed to obtain access token from PayU");
+                throw new AppException("Failed to obtain access token from PayU", HttpStatus.INTERNAL_SERVER_ERROR);
             }
-        } catch (Exception e) {
-            throw new RuntimeException("Error getting access token from PayU", e);
+        } catch (AppException | IOException | InterruptedException e) {
+            throw new AppException("Error getting access token from PayU: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Helper method to build form URL encoded string
     private String buildFormUrlEncodedString(Map<String, String> params) {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : params.entrySet()) {
@@ -78,19 +79,17 @@ public class PayUService {
     public PayUResponse createPayment(PayURequest payURequest) {
         try {
             String accessToken = getAccessToken();
-            System.out.println("Access Token: " + accessToken);
     
-            // Prepare the order payload
             Map<String, Object> order = new HashMap<>();
-            order.put("notifyUrl", "http://localhost:8080/orders/confirm"); // URL do odbierania powiadomień o statusie
-            order.put("customerIp", "127.0.0.1"); // Zamień na rzeczywisty adres IP
+            order.put("notifyUrl", "http://localhost:3000/confirm/" + payURequest.getOrderId());
+            order.put("continueUrl", "http://localhost:3000/confirm/" + payURequest.getOrderId());
+            order.put("customerIp", "127.0.0.1");
             order.put("merchantPosId", clientId);
             order.put("description", "Opłata zamówienia");
             order.put("currencyCode", "PLN");
     
-            // Ensure totalAmount is an integer value in grosze (cents)
             long totalAmount = Math.round(payURequest.getAmount() * 100);
-            order.put("totalAmount", totalAmount); // Total amount in grosze (integer only)
+            order.put("totalAmount", totalAmount);
     
             Map<String, Object> buyer = new HashMap<>();
             buyer.put("language", "pl");
@@ -98,14 +97,12 @@ public class PayUService {
     
             Map<String, Object> product = new HashMap<>();
             product.put("name", "Opłata zamówienia");
-            product.put("unitPrice", totalAmount); // Use integer unit price in grosze
+            product.put("unitPrice", totalAmount);
             product.put("quantity", 1);
             order.put("products", List.of(product));
     
-            // Convert the order to JSON
             String orderJson = objectMapper.writeValueAsString(order);
     
-            // Create HTTP request
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(PAYU_ORDER_URL))
                     .header("Content-Type", "application/json")
@@ -113,58 +110,77 @@ public class PayUService {
                     .POST(HttpRequest.BodyPublishers.ofString(orderJson))
                     .build();
     
-            // Send HTTP request and capture response
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     
-            // Log response status and body
-            System.out.println("Response Status Code: " + response.statusCode());
-            System.out.println("Response Body: " + response.body());
-    
-            // Treat 200 (OK) and 302 (Found) as success responses
             if (response.statusCode() == HttpStatus.OK.value() || response.statusCode() == HttpStatus.FOUND.value()) {
                 Map<String, Object> responseBody = objectMapper.readValue(response.body(), Map.class);
-                String redirectUri = (String) responseBody.get("redirectUri");
-                String transactionId = (String) responseBody.get("orderId");
     
-                // Extract status as a LinkedHashMap and retrieve the statusCode string from it
+                // Debugging: Print response structure
+                System.out.println("Response Body Structure: " + responseBody);
+    
+                String redirectUri = (String) responseBody.get("redirectUri");
+    
+                // Safely extract orderId and handle cases where it's a LinkedHashMap
+                Object orderIdObject = responseBody.get("orderId");
+                String transactionId;
+    
+                if (orderIdObject instanceof String) {
+                    transactionId = (String) orderIdObject;
+                } else if (orderIdObject instanceof Map) {
+                    // Extract transactionId from the nested map
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> orderIdMap = (Map<String, Object>) orderIdObject;
+                    transactionId = (String) orderIdMap.get("transactionId"); // Adjust the key if different
+                } else {
+                    throw new AppException("Unexpected orderId format in response", HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+    
                 Map<String, Object> statusMap = (Map<String, Object>) responseBody.get("status");
                 String status = (String) statusMap.get("statusCode");
     
                 return new PayUResponse(redirectUri, transactionId, status);
             } else {
-                throw new RuntimeException("Failed to create payment order with PayU. Status code: " + response.statusCode());
+                throw new AppException("Failed to create payment order with PayU. Status code: " + response.statusCode(), HttpStatus.BAD_REQUEST);
             }
-        } catch (Exception e) {
-            System.out.println("Exception Message: " + e.getMessage());
-            e.printStackTrace(); // Print stack trace for further analysis
-            throw new RuntimeException("Error creating payment with PayU", e);
+        } catch (AppException | IOException | InterruptedException e) {
+            throw new AppException("Error creating payment with PayU: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-    
 
-    // Method to verify payment status using transaction ID
     public boolean verifyPayment(String transactionId) {
         try {
-            System.out.println("Response Body: potwierdzenie tu robimy");
             String accessToken = getAccessToken();
-
+    
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(PAYU_ORDER_URL + "/" + transactionId))
                     .header("Authorization", "Bearer " + accessToken)
                     .GET()
                     .build();
-
+    
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
+    
             if (response.statusCode() == HttpStatus.OK.value()) {
+                @SuppressWarnings("unchecked")
                 Map<String, Object> responseBody = objectMapper.readValue(response.body(), Map.class);
-                String status = (String) responseBody.get("status");
-                return "COMPLETED".equals(status);
+    
+                Object statusObject = responseBody.get("status");
+    
+                if (statusObject instanceof String) {
+                    return "SUCCESS".equals(statusObject);
+                } else if (statusObject instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> statusMap = (Map<String, Object>) statusObject;
+                    String statusCode = (String) statusMap.get("statusCode");
+                    return "SUCCESS".equals(statusCode);
+                } else {
+                    throw new AppException("Unexpected status format in response", HttpStatus.INTERNAL_SERVER_ERROR);
+                }
             } else {
-                throw new RuntimeException("Failed to verify payment with PayU");
+                throw new AppException("Failed to verify payment with PayU", HttpStatus.INTERNAL_SERVER_ERROR);
             }
-        } catch (Exception e) {
-            throw new RuntimeException("Error verifying payment with PayU", e);
+        } catch (AppException | IOException | InterruptedException e) {
+            throw new AppException("Error verifying payment with PayU: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    
 }

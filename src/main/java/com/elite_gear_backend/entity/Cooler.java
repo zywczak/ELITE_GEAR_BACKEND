@@ -8,124 +8,47 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+@Builder
 @Table(name = "coolers")
 public class Cooler {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id")
     private Long id;
 
     @OneToOne
-    @JoinColumn(name = "product_id")
+    @JoinColumn(nullable = false)
     private Product product;
 
-    @Column(name = "type")
+    @Column(nullable = false)
     private String type;
 
-    @Column(name = "fan_count")
+    @Column(nullable = false)
     private int fanCount;
 
-    @Column(name = "fan_size")
+    @Column(nullable = false)
     private int fanSize;
 
-    @Column(name = "backlight")
+    @Column(nullable = false)
     private boolean backlight;
 
-    @Column(name = "material")
+    @Column(nullable = false)
     private String material;
 
-    @Column(name = "radiator_size")
+    @Column(nullable = false)
     private String radiatorSize;
 
-    @Column(name = "compatibility")
+    @Column(nullable = false)
     private String compatibility;
-
-    public Cooler() {
-    }
-
-    public Cooler(Product product, String type, int fanCount, int fanSize, boolean backlight, String material, String radiatorSize, String compatibility) {
-        this.product = product;
-        this.type = type;
-        this.fanCount = fanCount;
-        this.fanSize = fanSize;
-        this.backlight = backlight;
-        this.material = material;
-        this.radiatorSize = radiatorSize;
-        this.compatibility = compatibility;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Product getProduct() {
-        return product;
-    }
-
-    public void setProduct(Product product) {
-        this.product = product;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public int getFanCount() {
-        return fanCount;
-    }
-
-    public void setFanCount(int fanCount) {
-        this.fanCount = fanCount;
-    }
-
-    public int getFanSize() {
-        return fanSize;
-    }
-
-    public void setFanSize(int fanSize) {
-        this.fanSize = fanSize;
-    }
-
-    public boolean isBacklight() {
-        return backlight;
-    }
-
-    public void setBacklight(boolean backlight) {
-        this.backlight = backlight;
-    }
-
-    public String getMaterial() {
-        return material;
-    }
-
-    public void setMaterial(String material) {
-        this.material = material;
-    }
-
-    public String getRadiatorSize() {
-        return radiatorSize;
-    }
-
-    public void setRadiatorSize(String radiatorSize) {
-        this.radiatorSize = radiatorSize;
-    }
-
-    public String getCompatibility() {
-        return compatibility;
-    }
-
-    public void setCompatibility(String compatibility) {
-        this.compatibility = compatibility;
-    }
 }

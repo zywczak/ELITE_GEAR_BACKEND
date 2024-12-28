@@ -2,9 +2,12 @@ package com.elite_gear_backend.services;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.elite_gear_backend.dto.OrderDTO;
@@ -15,6 +18,7 @@ import com.elite_gear_backend.entity.Basket;
 import com.elite_gear_backend.entity.Order;
 import com.elite_gear_backend.entity.OrderDetail;
 import com.elite_gear_backend.entity.User;
+import com.elite_gear_backend.exceptions.AppException;
 import com.elite_gear_backend.repository.BasketRepository;
 import com.elite_gear_backend.repository.OrderDetailRepository;
 import com.elite_gear_backend.repository.OrderRepository;
@@ -42,75 +46,106 @@ public class OrderService {
 
     @Transactional
     public String createOrderAndInitiatePayment(OrderRequestDto orderRequestDto, Long userId) {
-        // Fetch user, basket items, and calculate total amount as before
+        try{
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new AppException("User not found", HttpStatus.NOT_FOUND));
+
+            double totalAmount = 0.0;
+            List<Basket> basketItems = basketRepository.findByUserId(userId);
+            if (basketItems.isEmpty()) {
+                throw new AppException("Basket is empty", HttpStatus.BAD_REQUEST);
+            }
+            
+            for (Basket basketItem : basketItems) {
+                totalAmount += basketItem.getProduct().getPrice() * basketItem.getQuantity();
+            }
+            Order order = new Order();
+            order.setOrderDate(new Date());
+            order.setUser(user);
+            order.setCity(orderRequestDto.getCity());
+            order.setStreet(orderRequestDto.getStreet());
+            order.setHouseNumber(orderRequestDto.getHouseNumber());
+            order.setPostalCode(orderRequestDto.getPostalCode());
+            order.setPaid(false);
+            order.setAmount(totalAmount);
+            orderRepository.save(order);
+            
+            for (Basket basketItem : basketItems) {
+                OrderDetail orderDetail = new OrderDetail();
+                orderDetail.setOrder(order);
+                orderDetail.setProduct(basketItem.getProduct());
+                orderDetail.setQuantity(basketItem.getQuantity());
+        
+                orderDetailRepository.save(orderDetail);
+            }
+            
+            basketRepository.deleteAll(basketItems);
+
+            PayURequest payURequest = new PayURequest(totalAmount, user.getEmail(), "Order payment", order.getId());
+            PayUResponse payUResponse = payUService.createPayment(payURequest);
+
+            order.setTransactionId(payUResponse.getTransactionId());
+            orderRepository.save(order);
+
+            return payUResponse.getPaymentUrl();
+        } catch (DataAccessException e) {
+                throw new AppException("Error database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (AppException e) {
+                throw new AppException("Unexpected error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }  
+    }
+
+    @Transactional
+    public String payOrder(Long userId, Long orderId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new AppException("User not found", HttpStatus.NOT_FOUND));
 
-        // Initialize total amount for the order
-        double totalAmount = 0.0;
-        List<Basket> basketItems = basketRepository.findByUserId(userId);
-        // Calculate the total amount from the basket items
-        for (Basket basketItem : basketItems) {
-            totalAmount += basketItem.getProduct().getPrice() * basketItem.getQuantity();
-        }
-        System.out.println(totalAmount);
-        // Create and initialize the Order object before saving
-        Order order = new Order();
-        order.setOrderDate(new Date());
-        order.setUser(user);
-        order.setCity(orderRequestDto.getCity());
-        order.setStreet(orderRequestDto.getStreet());
-        order.setHouseNumber(orderRequestDto.getHouseNumber());
-        order.setPostalCode(orderRequestDto.getPostalCode());
-        order.setPaid(false);
-        order.setAmount(totalAmount);  // Set the total amount before saving the order
-        // Save th  e order with the total amount set
-        order = orderRepository.save(order);
-        // Create and save OrderDetail entities for each item in the basket
-        for (Basket basketItem : basketItems) {
-            OrderDetail orderDetail = new OrderDetail();
-            orderDetail.setOrder(order); // Set reference to the saved Order
-            orderDetail.setProduct(basketItem.getProduct());
-            orderDetail.setQuantity(basketItem.getQuantity());
-    
-            // Save OrderDetail to repository
-            orderDetailRepository.save(orderDetail);
-        }
-        // // Clear the user's basket after order creation
-        basketRepository.deleteAll(basketItems);
-
-        // Create a payment request to PayU
-        PayURequest payURequest = new PayURequest(totalAmount, user.getEmail(), "Order payment");
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new AppException("Order not found", HttpStatus.NOT_FOUND));
+            
+        PayURequest payURequest = new PayURequest(order.getAmount(), user.getEmail(), "Order payment", orderId);
         PayUResponse payUResponse = payUService.createPayment(payURequest);
 
-        // Return the PayU payment URL for frontend to redirect the user
+        order.setTransactionId(payUResponse.getTransactionId());
+        orderRepository.save(order);
+        
         return payUResponse.getPaymentUrl();
     }
 
 
-    public void confirmOrder(Long userId, String payUTransactionId) {
-        // Verify payment with PayU using the transaction ID
-        boolean isPaymentConfirmed = payUService.verifyPayment(payUTransactionId);
+    public void confirmOrder(Long userId, Long orderId) {
+        try { 
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException("User not found", HttpStatus.NOT_FOUND));
 
-        if (!isPaymentConfirmed) {
-            throw new IllegalStateException("Payment not confirmed");
-        }
+            Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException("Unpaid order not found for user", HttpStatus.NOT_FOUND));
 
-        // Continue with order creation and save it to the database as in the original code
-        User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+            if(!Objects.equals(order.getUser().getId(), user.getId())){
+                throw new AppException("Not your order", HttpStatus.BAD_REQUEST);
+            }
 
-        // Set order details here and save to repository
-        // Find the latest order for the user that hasn't been marked as paid yet
-        Order order = orderRepository.findTopByUserIdAndPaidFalseOrderByOrderDateDesc(userId)
-            .orElseThrow(() -> new IllegalStateException("Unpaid order not found for user"));
+            boolean isPaymentConfirmed = payUService.verifyPayment(order.getTransactionId());
 
-        // Mark the order as paid
-        order.setPaid(true);
-        orderRepository.save(order);
+            if (!isPaymentConfirmed) {
+                throw new AppException("Payment not confirmed", HttpStatus.BAD_REQUEST);
+            }
+
+            order.setPaid(true);
+            orderRepository.save(order);
+        } catch (DataAccessException e) {
+            throw new AppException("Error database: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (AppException e) {
+                throw new AppException("Unexpected error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }  
     }
 
     public List<OrderDTO> getOrdersForUser(Long userId) {
         List<Order> orders = orderRepository.findByUserId(userId);
+
+        if (orders.isEmpty()) {
+            throw new AppException("No orders found for this user", HttpStatus.NOT_FOUND);
+        }
 
         return orders.stream().map(order -> {
             List<OrderDTO.ProductOrderDTO> products = orderDetailRepository.findByOrderId(order.getId())
@@ -134,4 +169,3 @@ public class OrderService {
         }).collect(Collectors.toList());
     }
 }
-

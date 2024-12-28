@@ -12,19 +12,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class UserDTO {
-
     private Long id;
     private String name;
     private String surname;
     private String email;
     private String token;
     private Role type;
-
-    public UserDTO toEntity() {
-        UserDTO user = new UserDTO();
-        user.setId(this.getId());
-        user.setName(this.getName());
-
-        return user;
-    }
 }
