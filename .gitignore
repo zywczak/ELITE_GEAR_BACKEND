@@ -33,3 +33,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+.mydatabase.mv.db
+.mydatabase.trace.db
+src/main/resources/public/

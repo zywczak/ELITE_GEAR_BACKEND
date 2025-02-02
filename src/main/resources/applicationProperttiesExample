@@ -1,0 +1,32 @@
+spring.application.name=elite_gear_backend
+
+spring.datasource.url=jdbc:h2:file:./mydatabase
+
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=
+spring.datasource.password=
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.h2.console.enabled=true
+
+photos.directory=/public
+
+payu.clientId=
+payu.clientSecret=
+                
+spring.servlet.multipart.enabled=true
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=20MB
+
+
+spring.web.cors.allow-credentials=true
+spring.web.cors.allowed-origins=http://localhost:3000, http://localhost:1025
+spring.web.cors.allowed-methods=GET, POST, PUT, DELETE, OPTIONS
+
+
+spring.mail.host=localhost
+spring.mail.port=1025
+spring.mail.username=
+spring.mail.password=
+spring.mail.properties.mail.smtp.auth=false
+spring.mail.properties.mail.smtp.starttls.enable=false
