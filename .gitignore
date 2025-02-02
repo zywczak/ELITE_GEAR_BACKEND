@@ -36,4 +36,4 @@ build/
 
 .mydatabase.mv.db
 .mydatabase.trace.db
-src/main/resources/public/
+src/main/resources/public/**
