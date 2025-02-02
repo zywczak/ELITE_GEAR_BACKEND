@@ -41,28 +41,28 @@ frontend part --> (https://github.com/zywczak/ELITE_GEAR_FRONTEND)
 
 ## Sequence diagrams in implementation reference:
 ### Registration
-![SS1](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/sceenshots/screenshot.png)
+![SS1](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/sceenshots/screenshot.png)
 ### Login
-![SS2](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot1.png)
+![SS2](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot1.png)
 ### Password Reset
-![SS3](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot2.png)
+![SS3](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot2.png)
 ### Browsing Products by Category
-![SS4](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot3.png)
+![SS4](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot3.png)
 ### Viewing a Specific Product
-![SS5](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot4.png)
+![SS5](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot4.png)
 ### Editing a Product
-![SS6](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot5.png)
+![SS6](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot5.png)
 ### Adding a Product
-![SS7](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot6.png)
+![SS7](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot6.png)
 ### Adding Ratings and Comments
-![SS8](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot7.png)
+![SS8](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot7.png)
 ### Deleting Ratings and Comments
-![SS9](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot8.png)
+![SS9](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot8.png)
 ### Viewing the Shopping Cart
-![SS10](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot9.png)
+![SS10](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot9.png)
 ### Adding Products to the Cart
-![SS12](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot11.png)
+![SS12](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot11.png)
 ### Placing Orders
-![SS15](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot14.png)
+![SS15](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot14.png)
 ### Viewing Orders
-![SS16](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/sceenshots/screenshot15.png)
+![SS16](https://github.com/zywczak/ELITE_GEAR_BACKEND/blob/main/screenshots/screenshot15.png)
